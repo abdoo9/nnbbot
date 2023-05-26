@@ -1,0 +1,44 @@
+version: '3.4'
+services:
+  whisperbot:
+    image: bot/whisperbot
+    build: .
+    networks:
+      - default
+      - proxy
+    env_file: .env
+    environment:
+      VIRTUAL_HOST: $WEBHOOK_DOMAIN
+      VIRTUAL_PORT: 8070
+      LETSENCRYPT_HOST: $WEBHOOK_DOMAIN
+      LETSENCRYPT_EMAIL: letsencrypt@hi2.in
+      PGHOST: pgsql
+      PGUSER: whisper
+      PGPASSWORD: pgpass
+      PGDATABASE: whisper
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.whisperbot-secure.entrypoints=websecure"
+      - "traefik.http.routers.whisperbot-secure.rule=Host(`nnbbot-ocibig.example.com`)"
+      - "traefik.http.services.whisperbot.loadbalancer.server.port=8070"
+  pgsql:
+    image: bot/whisperpg
+    build:
+      context: .
+      dockerfile: Dockerfile-db
+    restart: always
+    environment:
+      POSTGRES_USER: whisper
+      POSTGRES_DB: whisper
+      POSTGRES_PASSWORD: pgpass
+    volumes:
+      - pgsql:/var/lib/postgresql/data
+
+volumes:
+  pgsql:
+
+networks:
+  proxy:
+    external: true
